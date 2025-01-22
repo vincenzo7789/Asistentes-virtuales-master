@@ -53,5 +53,22 @@ class Asistente:
         except Exception as e:
             print("no se pudo reproducir el audio")
         os.remove(self.audio_path)
+
+    def trascrip(self):
+        try:
+            model=Model(self.vosk_path)
+        except Exception as e:
+            try:
+                model= Model(self.vosk_model_lang)
+            except Exception as e:
+                print("error al cargar el modelo de voz")
+
+    q=queue.Queue()
+    def callback(indata,frames,time,status):
+        q.put(bytes(indata))
     
+    silence_duration= 1.5
+    with sounddevice.RawInputStream(samplerate=16000, blocksize=8000,dtype="init16",channels=1,callback=callback):
+        print("escuchando...")
+        silence_counter= 0
     
