@@ -22,7 +22,7 @@ class Asistente:
         try:
             genai.configure(api_key=self.API)
             self.model=genai.GenerativeModel(
-                model_name=self.model_name
+                model_name=self.model_name,
                 generation_config=self.config,
             )
             self.chat = self.model.start_chat()
@@ -63,12 +63,71 @@ class Asistente:
             except Exception as e:
                 print("error al cargar el modelo de voz")
 
-    q=queue.Queue()
-    def callback(indata,frames,time,status):
-        q.put(bytes(indata))
-    
-    silence_duration= 1.5
-    with sounddevice.RawInputStream(samplerate=16000, blocksize=8000,dtype="init16",channels=1,callback=callback):
-        print("escuchando...")
-        silence_counter= 0
-    
+        q=queue.Queue()
+        def callback(indata,frames,time,status):
+            q.put(bytes(indata))
+        
+        silence_duration= 2
+        with sounddevice.RawInputStream(samplerate=16000, blocksize=8000,dtype="int16",channels=1,callback=callback):
+            print("escuchando...")
+            silence_counter= 0
+            recognizer=KaldiRecognizer(model,16000)
+            final_text=""
+            while True:
+                data=q.get()
+
+                if recognizer.AcceptWaveform(data):
+                    result= json.loads(recognizer.Result())['text']
+                    silence_counter=0
+                    final_text += f"{result}"
+                else:
+                    partial=json.loads(recognizer.PartialResult())['partial']
+                    print(partial)
+                    if partial=="":
+                        silence_counter+=1
+
+                if silence_counter >= silence_duration * (16000/8000):
+                    print("silencio detectado")
+                    break
+            if final_text != "":
+                print("listo")
+            else:
+                print("listo!")
+                return ""
+            
+    def key_board(self):
+        try:
+            model=Model(self.vosk_path)
+        except Exception as e:
+            try:
+                model= Model(self.vosk_model_lang)
+            except Exception as e:
+                print("error al cargar el modelo de voz")
+
+        q=queue.Queue()
+        def callback(indata,frames,time,status):
+            q.put(bytes(indata))
+        
+        with sounddevice.RawInputStream(samplerate=16000, blocksize=8000,dtype="int16",channels=1,callback=callback):
+            print("escuchando...")
+            recognizer=KaldiRecognizer(model,16000)
+            while True:
+                data=q.get()
+
+                if recognizer.AcceptWaveform(data):
+                    result= json.loads(recognizer.Result())['text']
+                
+                else:
+                    partial=json.loads(recognizer.PartialResult())['partial']
+                    print(partial)
+                
+gemini= Asistente("genmini-1.5-flash",
+                  "audio.mp3",
+                  "./models/vosk-model-small-es-0.42",
+                  "hola",
+                  config={"temperature":0.8,"top_p":0.95,"top_k":64,"max_output_tokens":8192,"response_mime_type":"text/plain,"},
+                  system_intruction="",
+                  API="AIzaSyD--kHOT3Vp6QiuaXNyBA_Zx0L6CQ-lUls",
+                  vosk_model_lang="es")
+
+gemini.trascrip()
