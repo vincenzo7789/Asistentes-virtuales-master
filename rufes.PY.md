@@ -1,10 +1,9 @@
-# Guia para hacer contribuciones al repositorio
+# Guía para hacer contribuciones al repositorio
 
 ## Resumen 
 
-este es un resumen 
+Este proyecto
 
----
 ## tabla de contenidos
 
 1. [Variables](#variable)
